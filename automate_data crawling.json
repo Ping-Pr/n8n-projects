@@ -1,0 +1,165 @@
+{
+  "name": "My workflow 6",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2794d251-cd0d-4cb1-923f-604b7e6d0b8e",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://minkara.carview.co.jp/car/toyota/1600gt/review/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        280,
+        0
+      ],
+      "id": "0ef4dc8a-b1e9-4acf-b8d3-4fec8b1ffd7a",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "title",
+              "cssSelector": "title"
+            },
+            {
+              "key": "content",
+              "cssSelector": "ul.review-carpage-list li"
+            },
+            {
+              "key": "date",
+              "cssSelector": ".date, .review-date, time"
+            },
+            {
+              "key": "author",
+              "cssSelector": ".author, .user-name, .reviewer"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        500,
+        0
+      ],
+      "id": "11da3757-800a-44f2-95c0-cea80cc269de",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Initialize array for processed messages\nconst processedMessages = [];\n\n// Process each extracted item\nfor (let i = 0; i < $input.all().length; i++) {\n  const item = $input.all()[i];\n  const data = item.json;\n  \n  // Skip if no content found\n  if (!data.title && !data.content) {\n    continue;\n  }\n  \n  // Generate unique message ID\n  const msgId = Date.now().toString() + Math.random().toString(36).substr(2, 9);\n  \n  // Get current timestamp\n  const currentTime = new Date().toISOString();\n  \n  // Create your required JSON format\n  const messageData = {\n    \"_msgid\": msgId,\n    \"payload\": {\n      \"_channel\": \"news\",\n      \"_data_type\": \"news\",\n      \"_is_topic\": true,\n      \"_page_id\": \"minkara.carview.co.jp:toyota:1600gt:review\",\n      \"_domain\": \"minkara.carview.co.jp\",\n      \"_page_url\": \"hhttps://minkara.carview.co.jp/car/toyota/1600gt/review/\",\n      \"_zone\": \"jp\",\n      \"_topic\": data.title || \"No title found\",\n      \"_description\": data.content || \"No content found\",\n      \"_user\": data.author || null,\n      \"_country_info\": {\n        \"location\": [],\n        \"language\": [\"ja\"],\n        \"site\": [\"JP\"],\n        \"profile\": [],\n        \"context\": []\n      },\n      \"_raw_desc\": `<html><head></head><body>${data.content || ''}</body></html>`,\n      \"_cts\": currentTime,\n      \"_gender\": 0,\n      \"_links\": [],\n      \"_id\": msgId,\n      \"_link\": \"https://minkara.carview.co.jp/car/toyota/1600gt/review/\"\n    },\n    \"topic\": \"\",\n    \"statusCode\": 200,\n    \"headers\": {\n      \"x-powered-by\": \"n8n-crawler\",\n      \"content-type\": \"application/json; charset=utf-8\",\n      \"date\": new Date().toUTCString(),\n      \"connection\": \"close\"\n    }\n  };\n  \n  processedMessages.push(messageData);\n}\n\n// Return processed messages\nreturn processedMessages.map(msg => ({ json: msg }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "9272cebf-de81-4277-9143-48de8ca2dba9",
+      "name": "Code",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get or create list of processed message IDs\nconst processedIds = $getWorkflowStaticData('global').processedMessageIds || [];\nconst newMessages = [];\n\n// Check each message\nfor (let i = 0; i < $input.all().length; i++) {\n  const item = $input.all()[i];\n  const messageId = item.json.payload._id;\n  \n  // Only process if we haven't seen this message before\n  if (!processedIds.includes(messageId)) {\n    processedIds.push(messageId);\n    newMessages.push(item);\n    \n    console.log(`New message found: ${messageId}`);\n  } else {\n    console.log(`Duplicate message skipped: ${messageId}`);\n  }\n}\n\n// Save updated list of processed IDs\n$getWorkflowStaticData('global').processedMessageIds = processedIds;\n\n// Return only new messages\nreturn newMessages;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        0
+      ],
+      "id": "d21d4a57-7152-42a8-b42d-6447ea6ba979",
+      "name": "Code1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "016dc778-c483-43d1-8119-1542bf755d38",
+  "meta": {
+    "instanceId": "947d63b75884b86bcde5c0da5343b9707888bd628657a7fea00ced2ce5add134"
+  },
+  "id": "4T4Al5nwRdpJnk6C",
+  "tags": []
+}
